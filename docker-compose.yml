@@ -1,0 +1,33 @@
+services:
+  ansible-control:
+    build:
+      context: .
+      dockerfile: dockerfileUbuntuHost
+    container_name: ansible-control
+    working_dir: /workspace
+    volumes:
+      - ./ansible:/workspace:ro
+    depends_on:
+      - nginxhost
+      - apphost
+    networks: [labnet]
+
+  nginxhost:
+    build:
+      context: .
+      dockerfile: dockerfileUbuntu
+    container_name: nginx-host
+    ports:
+      - "8080:80"
+    networks: [labnet]
+
+  apphost:
+    build:
+      context: .
+      dockerfile: dockerfileUbuntu
+    container_name: app-host
+    networks: [labnet]
+
+networks:
+  labnet:
+    driver: bridge

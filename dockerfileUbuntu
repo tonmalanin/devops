@@ -1,0 +1,13 @@
+FROM ubuntu:24.04
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openssh-server sudo python3 ca-certificates && \
+    useradd -m -s /bin/bash admin && \
+    echo 'admin:securepassword' | chpasswd && \
+    printf '%s\n' 'admin ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/admin && \
+    chmod 440 /etc/sudoers.d/admin && \
+    mkdir -p /run/sshd && \
+    printf '%s\n' 'PasswordAuthentication yes' 'PermitRootLogin no' > /etc/ssh/sshd_config.d/lab.conf && \
+    ssh-keygen -A && \
+    rm -rf /var/lib/apt/lists/*
+CMD ["/usr/sbin/sshd", "-D", "-e"]
