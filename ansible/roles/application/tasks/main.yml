@@ -1,0 +1,70 @@
+---
+- name: Verify target is Debian family
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['os_family'] == 'Debian'
+    fail_msg: 'This lab supports Debian/Ubuntu application targets.'
+
+- name: Install dependencies
+  ansible.builtin.apt:
+    name:
+      - golang-go
+      - ca-certificates
+      - procps
+      - curl
+    state: present
+    update_cache: true
+
+- name: Create application directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /opt/lab-app
+    - /opt/lab-app/src
+    - /opt/lab-app/bin
+
+- name: Copy Go application source
+  ansible.builtin.copy:
+    src: main.go
+    dest: /opt/lab-app/src/main.go
+    mode: '0644'
+  register: app_source
+
+- name: Check compiled binary
+  ansible.builtin.stat:
+    path: /opt/lab-app/bin/lab-app
+  register: app_binary
+
+- name: Compile application on target
+  ansible.builtin.command: go build -o /opt/lab-app/bin/lab-app /opt/lab-app/src/main.go
+  environment:
+    GO111MODULE: 'off'
+  when: app_source.changed or not app_binary.stat.exists
+  notify: Restart application
+
+- name: Install application management script
+  ansible.builtin.copy:
+    src: run-app.sh
+    dest: /opt/lab-app/run-app.sh
+    mode: '0755'
+  notify: Restart application
+
+- name: Ensure application is running
+  ansible.builtin.command: /opt/lab-app/run-app.sh start
+  register: app_start
+  changed_when: "'started' in app_start.stdout"
+
+- name: Flush restart notifications before health check
+  ansible.builtin.meta: flush_handlers
+
+- name: Verify app health
+  ansible.builtin.uri:
+    url: http://127.0.0.1:8080/health
+    status_code: 200
+    return_content: true
+  register: health
+  until: health.status == 200
+  retries: 10
+  delay: 1

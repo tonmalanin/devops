@@ -1,0 +1,6 @@
+---
+- name: Restart application
+  ansible.builtin.shell: |
+    /opt/lab-app/run-app.sh stop
+    /opt/lab-app/run-app.sh start
+  changed_when: true

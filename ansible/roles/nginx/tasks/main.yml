@@ -1,0 +1,35 @@
+---
+- name: Install nginx on clean server
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+    update_cache: true
+
+- name: Configure reverse proxy
+  ansible.builtin.template:
+    src: lab.conf.j2
+    dest: /etc/nginx/sites-available/default
+    mode: '0644'
+  notify: Reload nginx
+
+- name: Validate nginx configuration
+  ansible.builtin.command: nginx -t
+  changed_when: false
+
+- name: Check whether nginx is running
+  ansible.builtin.command: pgrep -x nginx
+  register: nginx_running
+  changed_when: false
+  failed_when: false
+
+- name: Start nginx when needed
+  ansible.builtin.command: nginx
+  when: nginx_running.rc != 0
+
+- name: Apply updated configuration
+  ansible.builtin.meta: flush_handlers
+
+- name: Verify nginx can access application
+  ansible.builtin.uri:
+    url: http://127.0.0.1/health
+    status_code: 200

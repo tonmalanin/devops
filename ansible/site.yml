@@ -1,0 +1,10 @@
+---
+- name: Deploy Go application
+  hosts: application
+  roles:
+    - application
+
+- name: Install and configure nginx
+  hosts: nginx
+  roles:
+    - nginx
